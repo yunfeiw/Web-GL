@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.旋转后缩放</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id='canvas'></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        uniform mat4 u_Matrix;
+        void main(){
+            gl_Position = u_Matrix*a_Position;
+            gl_PointSize = 10.0;
+        }
+    </script>
+    <script id='fragmentShader' type="x-shader/x-fragments">
+        void main(){
+            gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+        }
+    </script>
+    <script type="module">
+        import { initShaders } from './jsm/Utils.js';
+        import { Matrix4 } from 'https://unpkg.com/three/build/three.module.js';
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // 画笔
+        const gl = canvas.getContext('webgl');
+        const vsSource = document.getElementById('vertexShader').innerText;
+        const fsSource = document.getElementById('fragmentShader').innerText;
+        initShaders(gl, vsSource, fsSource);
+        // 缓存对象
+        const vertices = new Float32Array([
+            0.0, 0.1,
+            -0.1, -0.1,
+            0.1, -0.1
+        ])
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+        // 赋值点位
+        const a_Position = gl.getAttribLocation(gl.program,'a_Position');
+        gl.vertexAttribPointer(a_Position,2,gl.FLOAT,false,0,0);
+        gl.enableVertexAttribArray(a_Position);
+        // 缩放
+        const ms = new Matrix4();
+        ms.makeScale(3,2,2);
+        // 旋转
+        const mr = new Matrix4();
+        mr.makeRotationZ(0.5);
+        const mc = mr.multiply(ms);
+        // 变量
+        const u_Matrix = gl.getUniformLocation(gl.program, 'u_Matrix');
+        gl.uniformMatrix4fv(u_Matrix, false, mc.elements);
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+    </script>
+</body>
+
+</html>

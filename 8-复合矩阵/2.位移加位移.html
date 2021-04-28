@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2.位移加位移</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="v-shader/v-vertex">
+        attribute vec4 a_Position;
+      uniform mat4 u_Matrix;
+      void main(){
+          gl.Position = a_Position;
+          gl.PointSize = 10.0;
+      }
+    </script>
+    <script id="fragmentShader" type="v-shader/v-fragment">
+      void main(){
+          gl_FragColor=vec4(1.0,1.0,0.0,1.0);
+      }
+    </script>
+
+    <script type="module">
+      import { initShaders } from "./jsm/Utils.js";
+      import { Matrix4 } from 'https://unpkg.com/three/build/three.module.js';
+
+      const canvas = document.querySelector("canvas");
+      canvas.width = window.width;
+      canvas.height = window.height;
+
+      // 画笔
+      const gl = canvas.getContext("webgl");
+      const vsSource = document.getElementById("vertexShader").innerText;
+      const fsSource = document.getElementById("fragmentShader").innerText;
+      initShaders(gl, vsSource, fsSource);
+
+      
+    </script>
+  </body>
+</html>
