@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>7.星星眨眼</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #canvas {
+      background: url(./images/sky.jpg) no-repeat;
+      background-size: cover;
+      background-position: right bottom;
+    }
+
+    #audio {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      opacity: 10%;
+      transition: opacity 200ms;
+      z-index: 20;
+    }
+
+    #audio:hover {
+      opacity: 90%;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <video id='audio' src="./audio/cef.mp3" controls loop autoplay></video>
+  <!-- 
+      ！ 要点
+      // 补间动画  (AE-推荐了解)
+     -->
+  <!-- 顶点着色器 -->
+  <script id='vertexShader' type="x-shader/x-vertex">
+        //定义变量
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        
+        void main(){
+          gl_Position = a_Position;
+          gl_PointSize = a_PointSize;
+        }
+    </script>
+  <!-- 片元着色器 -->
+  <script id='fragmentShader' type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec4 u_FragColor;
+        // 当前绘图区域
+        void main(){
+          float dist = distance(gl_PointCoord,vec2(0.5,0.5));
+          if(dist<0.5){
+              gl_FragColor=u_FragColor;
+          }else{
+              discard;
+          }
+        }
+    </script>
+
+  <script type="module">
+    // import { initShader } from './jsm/Utils';
+    import Compose from "./jsm/Compose.js";
+    import Track from "./jsm/Track.js";
+    var starts = [];
+    //合成对象
+    const compose = new Compose();
+    // canvas 
+    const canvas = document.querySelector('#canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    // 生成画笔
+    const gl = canvas.getContext('webgl');
+    // 打开合成器
+    gl.enable(gl.BLEND);
+    // 合成方式
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPAHA);
+    // 获取着色器文本
+    const vsShader = document.querySelector('#vertexShader').innerText;
+    const fsShader = document.querySelector('#fragmentShader').innerText;
+    // 挂载着色器对象
+    initShader(gl, vsShader, fsShader);
+
+    // 获取着色器变量
+    const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+    const a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+    const u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
+
+
+
+    // 声明颜色
+    gl.clearColor(0, 0, 0, 0);
+    // 刷底色
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // render(starts);
+
+    // 点击事件
+    let flag = true;
+    const video = document.querySelector('#audio');
+    canvas.addEventListener("click", ({ clientX, clientY }) => {
+      if (flag) {
+        flag = false;
+        video.play();
+        video.volume = 0.4
+      }
+      const { left, top, width, height } = canvas.getBoundingClientRect();
+      // canvas位置
+      const [cssX, cssY] = [clientX - left, clientY - top];
+      // 坐标原点差异
+      const [halfWidth, halfHeight] = [width / 2, height / 2];
+      const [xBaseCenter, yBaseCenter] = [
+        cssX - halfWidth,
+        cssY - halfHeight,
+      ];
+      // 解决y轴差异
+      const yBaseCenterTop = -yBaseCenter;
+      // 比例
+      const [x, y] = [xBaseCenter / halfWidth, yBaseCenterTop / halfHeight];
+
+      const s = Math.random() * 5 + 2;
+      const a = Math.random();
+      const obj = { x, y, s, a };
+      starts.push(obj);
+      //建立轨道对象
+      const track = new Track(obj);
+      track.start = new Date();
+      track.timeLen = 2000;
+      track.loop = true;
+      track.keyMap = new Map([
+        [
+          "a",
+          [
+            [500, a],
+            [1000, 0],
+            [1500, a],
+          ],
+        ],
+      ]);
+      compose.add(track);
+      // render(starts);
+    });
+    // 更新
+    !(function ani() {
+      compose.update(new Date());
+      render(starts);
+      requestAnimationFrame(ani);
+    })();
+    function render(arr) {
+      // gl.clear(gl.COLOR_BUFFER_BIT);
+      arr.forEach(({ x, y, s, a }) => {
+        gl.vertexAttrib2f(a_Position, x, y);
+        gl.vertexAttrib1f(a_PointSize, s);
+
+        const arr = new Float32Array([0.91, 0.91, 1, a]); //星星颜色
+        gl.uniform4fv(u_FragColor, arr);
+
+        gl.drawArrays(gl.POINTS, 0, 1);
+      });
+    }
+
+
+    // 初始化 着色器
+
+    function initShader(gl, vsSource, fsSource) {
+      // 创建程序
+      const program = gl.createProgram();
+      // createProgram
+      const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+      const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+      // 装载到程序中
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      // 链接webgl上下文
+      gl.linkProgram(program);
+      // 启动程序
+      gl.useProgram(program);
+      // 挂载到上下文中
+      gl.program = program;
+
+      return true;
+    }
+    // 初始化着色器
+    function loadShader(gl, type, source) {
+      // 创建着色器
+      const shader = gl.createShader(type);
+      // 载入文本
+      gl.shaderSource(shader, source);
+      // 编译
+      gl.compileShader(shader);
+      // 返回
+      return shader;
+    }
+
+  </script>
+</body>
+
+</html>
