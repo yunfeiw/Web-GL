@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4.js控制旋转</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <!-- 顶点着色器 -->
+    <script id="vertexShader" type="v-shader/v-vertex">
+        attribute vec4 a_Position;
+     
+        uniform float u_SinB;
+        uniform float u_CosB;
+
+        void main(){
+            //gl_Position = a_Position+translation;
+
+            gl_Position.x=a_Position.x*u_CosB-a_Position.y*u_SinB;
+            gl_Position.y=a_Position.y*u_CosB+a_Position.x*u_SinB;
+        
+            gl_Position.z=a_Position.z;
+            gl_Position.w=1.0;
+        }
+    </script>
+    <!-- 片元着色器 -->
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        void main(){
+          gl_FragColor=vec4(1.0,1.0,0.0,1.0);
+        }
+      </script>
+    <script type="module">
+        import { initShaders } from './jsm/Utils.js';
+        const canvas = document.getElementById('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const gl = canvas.getContext('webgl');
+
+        const vsSource = document.getElementById('vertexShader').innerText;
+        const fsSource = document.getElementById('fragmentShader').innerText;
+        initShaders(gl, vsSource, fsSource);
+
+        const vertices = new Float32Array([
+            0.0, 0.4,
+            -0.2, -0.2,
+            0.2, -0.2
+        ]);
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        // 获取变量
+        const u_SinB = gl.getUniformLocation(gl.program, 'u_SinB')
+        const u_CosB = gl.getUniformLocation(gl.program, 'u_CosB')
+
+        // 修改
+        let angle = 0;
+        gl.uniform1f(u_SinB, Math.sin(angle));
+        gl.uniform1f(u_CosB, Math.cos(angle));
+
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        !(function ani() {
+            angle += 0.01
+            gl.uniform1f(u_SinB, Math.sin(angle))
+            gl.uniform1f(u_CosB, Math.cos(angle))
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            requestAnimationFrame(ani)
+        })()
+    </script>
+</body>
+
+</html>
