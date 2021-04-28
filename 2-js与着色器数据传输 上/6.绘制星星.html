@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>6.绘制星星</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+
+      #canvas {
+        background: url(./images/sky.jpg) no-repeat;
+        background-size: cover;
+        background-position: right bottom;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="canvas"></canvas>
+    <!-- 
+      ！ 要点
+
+      透明度：
+        需要启动颜色合成 达到透明度需求
+        gl.enable(gl.BLEND)
+        （三位画笔位置 启动颜色合成）
+        合成方式
+        gl.blendFunc()
+
+     -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        void main(){
+          gl_Position = a_Position;
+          gl_PointSize = a_PointSize;
+      }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+      precision mediump float;
+      uniform vec4 u_FragColor;
+      void main(){
+          float dist = distance(gl_PointCoord,vec2(0.5,0.5));
+          if(dist<0.5){
+              gl_FragColor=u_FragColor;
+          }else{
+              discard;
+          }
+      }
+    </script>
+
+    <script type="module">
+      import { initShader } from "./jsm/Utils.js";
+      const starts = [];
+      // canvas
+      const canvas = document.querySelector("#canvas");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      // 获取着色器；
+      const vsShader = document.querySelector("#vertexShader").innerText;
+      const fsShader = document.querySelector("#fragmentShader").innerText;
+      // 生成三维画笔
+      const gl = canvas.getContext("webgl");
+      // 合成
+      gl.enable(gl.BLEND);
+      // 合成方式
+      gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPAHA);
+      // 挂载 着色器
+      initShader(gl, vsShader, fsShader);
+      // 获取着色器
+      const a_Position = gl.getAttribLocation(gl.program, "a_Position");
+      const a_PointSize = gl.getAttribLocation(gl.program, "a_PointSize");
+      const u_FragColor = gl.getUniformLocation(gl.program, "u_FragColor");
+
+      //声明颜色
+      gl.clearColor(0, 0, 0, 0);
+      // 刷底色
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // 绘制顶点
+      render(starts);
+
+      //   gl.drawArrays(gl.POINTS, 0, 1);
+
+      canvas.addEventListener("click", ({ clientX, clientY }) => {
+        const { left, top, width, height } = canvas.getBoundingClientRect();
+        // canvas位置
+        const [cssX, cssY] = [clientX - left, clientY - top];
+        // 坐标原点差异
+        const [halfWidth, halfHeight] = [width / 2, height / 2];
+        const [xBaseCenter, yBaseCenter] = [
+          cssX - halfWidth,
+          cssY - halfHeight,
+        ];
+        // 解决y轴差异
+        const yBaseCenterTop = -yBaseCenter;
+        // 比例
+        const [x, y] = [xBaseCenter / halfWidth, yBaseCenterTop / halfHeight];
+
+        const s = Math.random() * 5 + 2;
+        const a = Math.random();
+        starts.push({ x, y, s, a });
+        render(starts);
+      });
+
+      function render(arr) {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        arr.forEach(({ x, y, s, a }) => {
+          gl.vertexAttrib2f(a_Position, x, y);
+          gl.vertexAttrib1f(a_PointSize, s);
+
+          const arr = new Float32Array([0.91, 0.91, 1, a]); //星星颜色
+          gl.uniform4fv(u_FragColor, arr);
+
+          gl.drawArrays(gl.POINTS, 0, 1);
+        });
+      }
+    </script>
+  </body>
+</html>

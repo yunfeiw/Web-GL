@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鼠标控制点位</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #canvas {
+            background-color: antiquewhite;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 
+        同步绘图：
+            在同一个事件周期内
+            绘制画布的信息会存储至内存中
+            所以会在绘制下一帧时，保留上次绘制内容
+        
+        异步绘制：
+            上一次 绘制信息已被清空。所以只能保留当前帧
+
+     -->
+    <canvas id="canvas"></canvas>
+    <!-- 创建顶点着色器 -->
+    <script id='vertexShader' type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        attribute float a_PointSize;
+        void main(){
+            // 点位
+            gl_Position = a_Position;
+            // 尺寸
+            gl_PointSize = a_PointSize;
+        }
+    </script>
+    <!-- 创建片元着色器 -->
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        void main(){
+            gl_FragColor=vec4(1,1,0,1);
+        }
+      </script>
+    <script type="module">
+        import { initShader } from './jsm/Utils.js';
+        // 获取节点
+        const canvas = document.querySelector('#canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        // 获取着色器文本
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+        // 三维画笔
+        const gl = canvas.getContext('webgl');
+        // 初始化着色器
+        initShader(gl, vsSource, fsSource);
+        // 设置attribute变量
+        const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        const a_PointSize = gl.getAttribLocation(gl.program, 'a_PointSize');
+
+        // 声明颜色
+        gl.clearColor(0, 0, 0, 1);
+        // 刷底色
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // 修改attribute变量
+        gl.vertexAttrib1f(a_Position, 0.1);
+        gl.vertexAttrib1f(a_PointSize, 10);
+        // 绘制顶点
+        gl.drawArrays(gl.POINTS, 0, 1);
+
+        // 异步绘图
+        setTimeout(() => {
+            const arr = [
+                { x: 0.7, y: 0.7, s: 50 },
+                { x: -0.5, y: 0.5, s: 100 },
+                { x: 0.4, y: -0.5, s: 150 }
+            ];
+            render(arr)
+        }, 2000)
+        // 创建 绘制函数
+        function render(arr) {
+            arr.forEach(e => {
+                gl.vertexAttrib2f(a_Position, e.x, e.y);
+                gl.vertexAttrib1f(a_PointSize, e.s);
+                gl.drawArrays(gl.POINTS, 0, 1)
+            })
+        }
+    </script>
+</body>
+
+</html>
