@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1.多点同色</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #canvas {
+            background-color: antiquewhite;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        void main(){
+            gl_Position = a_Position;
+            gl_PointSize = 5.0;
+        }
+    </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform vec4 u_FragColor;
+        void main(){
+            gl_FragColor = u_FragColor;
+        }
+    </script>
+    <script type="module">
+        import { initShaders } from './jsm/Utils.js'
+        const canvas = document.querySelector("#canvas");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext("webgl");
+
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+        
+        initShaders(gl, vsSource, fsSource);
+        
+        // 顶点数据
+        const vertices = new Float32Array([
+            0,0.2,
+            -0.2,-0.1,
+            0.2,-0.1,
+            0.4,0.2
+        ]);
+        // 缓存
+        const vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+        // 变量
+        const a_Position = gl.getAttribLocation(gl.program,"a_Position");
+        const u_FragColor = gl.getUniformLocation(gl.program,'u_FragColor');
+        // 修改
+        gl.vertexAttribPointer(a_Position,1,gl.FLOAT,false,0,0);
+        gl.uniform4f(u_FragColor,1,1,1,1);
+        // 赋能 - 批处理
+        gl.enableVertexAttribArray(a_Position);
+        
+        //声明颜色 rgba
+        gl.clearColor(0, 0, 0, 1);
+        //刷底色
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.POINTS,0,4);
+    </script>
+</body>
+
+</html>

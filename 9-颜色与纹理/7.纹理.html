@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7.纹理</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec4 a_Position;
+        attribute vec2 a_Pin;
+        varying vec2 v_Pin;
+        void main(){
+          gl_Position = a_Position;
+          v_Pin=a_Pin;
+        }
+      </script>
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision mediump float;
+        uniform sampler2D u_Sampler;
+        varying vec2 v_Pin;
+        void main(){
+          gl_FragColor=texture2D(u_Sampler,v_Pin);
+        }
+      </script>
+    <!-- 
+        sampler2D 是uniform 变量的类型，叫做二维取样器
+        texture2D()基于图钉从取样器中获取片元颜色
+    -->
+
+    <script type="module">
+        import { initShaders, ScaleLinear, SinFn, GetIndexInGrid } from './jsm/Utils.js';
+        import { Matrix4, Vector3, Quaternion, Plane, Ray, Color } from 'https://unpkg.com/three/build/three.module.js';
+        import Poly from './jsm/Poly.js';
+        const canvas = document.getElementById('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gl = canvas.getContext('webgl');
+        const vsSource = document.querySelector('#vertexShader').innerText;
+        const fsSource = document.querySelector('#fragmentShader').innerText;
+
+        initShaders(gl, vsSource, fsSource);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        
+        // 数据源
+        const source = new Float32Array([
+            -0.5, 0.5, 0.0, 1.0,
+            -0.5, -0.5, 0.0, 0.0,
+            0.5, 0.5, 1.0, 1.0,
+            0.5, -0.5, 1.0, 0.0,
+        ])
+        // 元素字节数
+        const FSIZE = source.BYTES_PER_ELEMENT;
+        // 系列尺寸
+        const elementBytes = source.BYTES_PER_ELEMENT;
+        // 系列尺寸
+        const posSize = 2;
+        const pinSize = 2;
+        // 类目字节数
+        const categorySize = posSize + pinSize;
+        // 系列子节索引位置
+        const categoryBytes = categorySize * elementBytes;
+        // 系列子节索引位置
+        const posByteIndex = 0;
+        const pinByteIndex = posSize * elementBytes;
+        // 顶点总数
+        const sourceSize  = source.length / categorySize;
+
+        // 数据源中写入缓冲区
+
+        const sourceBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,sourceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER,source,gl.STATIC_DRAW);
+
+        const a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        gl.vertexAttribPointer(
+            a_Position,
+            posSize,
+            gl.FLOAT,
+            false,
+            categoryBytes,
+            posByteIndex
+        );
+        gl.enableVertexAttribArray(a_Position);
+        const a_Pin = gl.getAttribLocation(gl.program,'a_Pin');
+        gl.vertexAttribPointer(
+            a_Pin,
+            pinSize,
+            gl.FLOAT,
+            false,
+            categoryBytes,
+            pinByteIndex
+        );
+        gl.enableVertexAttribArray(a_Pin);
+
+        // 建立纹理图像垂直翻转
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,1);
+        // 纹理单元
+        gl.activeTexture(gl.TEXTURE0);
+        // 纹理对象
+        const texture = gl.createTexture();
+        // 纹理对象绑定到纹理单元中
+        gl.bindTexture(gl.TEXTURE_2D,texture);
+        // img对象
+        const image = new Image();
+        image.src = './images/erha2.jpg';
+        image.onload=function(){
+            console.log(1)
+            showMap()
+        }
+        // 题图
+        function showMap(){
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,
+                gl.RGB,
+                gl.RGB,
+                gl.UNSIGNED_BYTE,
+                image
+            );
+            // 配置纹理参数
+            gl.texParameteri(
+                gl.TEXTURE_2D,
+                gl.TEXTURE_MIN_FILTER,
+                gl.LINEAR
+            )
+            const u_Sampler = gl.getUniformLocation(gl.program,'u_Sampler');
+            //将0号纹理分配给着色器，0 是纹理单元编号
+            gl.uniform1i(u_Sampler, 0);
+
+            //渲染
+            render()
+        }
+
+        function render() {
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, sourceSize);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>1.多点异色</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <!-- 顶点着色器 -->
+    <script id="vertexShader" type="v-shader/v-vertex">
+        attribute vec4 a_Position;
+        // 列主序
+      uniform mat4 u_Matrix;
+        void main(){
+            gl_Position = a_Position;
+            gl_PointSize = 50.0;
+        }
+    </script>
+    <!-- 片元着色器 -->
+    <script id="fragmentShader" type="v-shader/v-fragment">
+        void main(){
+        gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+      }
+    </script>
+    <script type="module">
+        import { initShaders } from "./jsm/Utils.js";
+      import { Compose } from "./jsm/Compose.js";
+      import { Track } from "./jsm/Track.js";
+      const canvas = document.querySelector("#canvas");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const gl = canvas.getContext("webgl");
+      const vsShader = document.querySelector("#vertexShader").innerText;
+      const fsShader = document.querySelector("#fragmentShader").innerText;
+
+      initShaders(gl, vsShader, fsShader);
+
+      // 缓存器
+      const vertices = new Float32Array([
+          0.5,0.6,0.0,1.0,
+          0.6,0.7,0.0,1.0,
+          0.7,0.8,0.0,1.0
+    ]);
+      const vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      const a_Position = gl.getAttribLocation(gl.program, "a_Position");
+
+      gl.vertexAttribPointer(a_Position, 4, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(a_Position);
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.POINTS, 0, 3);
+      const compose = new Compose();
+      compose.add( new Track(vertices));
+      
+      !(function animation() {
+         gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW)
+         compose.update()
+         render()
+         requestAnimationFrame(animation);
+      })();
+
+      function render() {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.POINTS, 0, 3);
+      }
+    </script>
+</body>
+
+</html>
